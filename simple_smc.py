@@ -134,17 +134,10 @@ def order_block(data):
 def buy_signal(data):
     ob = order_block(data)
     ob.reset_index(drop=True)
-    # print(ob)
-    # exit(0)
-    # print(str(ob))
     curr_index = len(data)-1
-    # print(curr_index, (ob[~np.isnan(ob['MitigatedIndex'])]))
-    # print(ob[(~np.isnan(ob['MitigatedIndex'])) & (ob['MitigatedIndex']!=0) & (ob['OB']==1)])
     mitigated_index = np.where(ob["OB"]==1, ob["MitigatedIndex"], np.nan)
-    # print(curr_index, mitigated_index[~np.isnan(mitigated_index)])
 
     if curr_index in mitigated_index:
-        # print(np.where(mitigated_index == curr_index)[0])
         return [True, ob['Bottom'].iloc[np.where(mitigated_index == curr_index)[0]].values[-1]]
     else:
         return [False, 0]
@@ -189,6 +182,10 @@ def test_ob(data, name='temp'):
     results = {'Stock_name': name, 'P/L': buy_order_df['P/L'].sum(), 'WL_ratio': num_wins/num_loss,
                 'Avg_win': buy_order_df.loc[buy_order_df['P/L']>0, 'P/L'].sum()/num_wins,
                 'Avg_loss': buy_order_df.loc[buy_order_df['P/L']<0, 'P/L'].sum()/num_loss}
+
+    for k,v in results.items():
+        if type(v) == float:
+            results[k] = round(v, 2)
 
     buy_order_df.to_csv(f'new/ob/{name}_buy.csv')
     print("Total profit/loss = ", buy_order_df['P/L'].sum())
@@ -243,6 +240,10 @@ def test_ema_ob(data, name = 'temp'):
                'Avg_win': buy_order_df.loc[buy_order_df['P/L'] > 0, 'P/L'].sum() / num_wins,
                'Avg_loss': buy_order_df.loc[buy_order_df['P/L'] < 0, 'P/L'].sum() / num_loss}
 
+    for k,v in results.items():
+        if type(v) == float:
+            results[k] = round(v, 2)
+
     buy_order_df.to_csv(f'new/ema_ob/{name}_buy.csv')
     print("Total profit/loss = ", buy_order_df['P/L'].sum())
     print(
@@ -261,17 +262,19 @@ if __name__ == "__main__":
     
     results = pd.DataFrame()
 
+    interval = '5m'
+
     for i_file_name in list_of_data_sources:
         if i_file_name in ['NSEI']:
             inp_data = YfinanceStockDataFetcher(write_data=1, data_sub_folder_name='') \
-                .run_fetcher('^NSEI', period='5d', interval='15m')
+                .run_fetcher('^NSEI', period='5d', interval=interval)
         elif i_file_name in ['NSEBANK']:
             inp_data = YfinanceStockDataFetcher(write_data=1, data_sub_folder_name='') \
-                .run_fetcher('^NSEBANK', period='1mo', interval='15m')
+                .run_fetcher('^NSEBANK', period='1mo', interval=interval)
         else:
             stock_name = i_file_name + '.NS'
             inp_data = YfinanceStockDataFetcher(write_data=1, data_sub_folder_name='') \
-                .run_fetcher(stock_name, period='1mo', interval='15m')
+                .run_fetcher(stock_name, period='1mo', interval=interval)
         #out_df.to_csv(r'temp\1m_data_check.csv')
         # inp_data.to_csv('temp.csv')
         # exit(0)
@@ -302,5 +305,5 @@ if __name__ == "__main__":
         print(f'finished : {i_file_name}')
         print('------------------------------------------------------\n\n')
     
-    results.to_csv('new/ob_15m.csv')
+    results.to_csv(f'new/ob_{interval}.csv')
     print('Total P/L : ', results['P/L'].sum())
